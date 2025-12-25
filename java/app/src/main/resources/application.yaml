@@ -1,0 +1,41 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: payment-project
+  # 1. Database Connection (Service name: db)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/payments_db
+    username: user
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  
+  # 2. Redis Connection (Service name: redis)
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  
+  # 3. Kafka Connection (Service name: kafka_custom)
+  kafka:
+    bootstrap-servers: "kafka_custom:29092"
+    consumer:
+      group-id: payment-group
+      auto-offset-reset: earliest
+
+# 4. Observability (For Prometheus/Grafana)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,prometheus,info
+  endpoint:
+    prometheus:
+      enabled: true

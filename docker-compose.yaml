@@ -1,0 +1,72 @@
+services:
+  # 1. Custom Database Service (Uses your ./postgres/Dockerfile)
+  db:
+    build:
+      context: ./postgres
+    container_name: postgres_db
+    environment:
+      POSTGRES_DB: payments_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+
+  # 2. Custom Caching Service (Uses your ./redis/Dockerfile)
+  redis:
+    build:
+      context: ./redis
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    volumes:
+      # Ensure this volume mount is correct as per your redis Dockerfile
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.3
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    build: ./kafka
+    container_name: kafka_custom
+    ports:
+      - "9092:9092"   # External access for Windows
+      - "29092:29092" # Internal access for other containers
+    depends_on:
+      - zookeeper
+
+    # UI for Redis
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis_ui
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+
+    # UI for Kafka and Zookeeper
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka_ui
+    ports:
+      - "8080:8080"
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local-cluster
+      # IMPORTANT: Use the internal port 29092 here!
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka_custom:29092
+      - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
+    depends_on:
+      - kafka
+      - zookeeper
+volumes:
+  postgres_data:
