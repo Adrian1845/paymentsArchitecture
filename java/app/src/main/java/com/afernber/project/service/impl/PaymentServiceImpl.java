@@ -19,10 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -62,7 +59,8 @@ public class PaymentServiceImpl implements PaymentService {
         if (rawData instanceof String jsonString) {
             try {
                 log.info("Redis HIT for Member Payments: {}", memberId);
-                return objectMapper.readValue(jsonString, new TypeReference<List<PaymentDTO>>() {});
+                return objectMapper.readValue(jsonString, new TypeReference<>() {
+                });
             } catch (JsonProcessingException e) {
                 log.error("Failed to parse JSON from Redis: {}", e.getMessage());
             }

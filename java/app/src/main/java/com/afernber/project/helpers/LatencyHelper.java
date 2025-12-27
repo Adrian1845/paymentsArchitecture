@@ -3,7 +3,6 @@ package com.afernber.project.helpers;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-
 public class LatencyHelper {
 
     /*** Make the thread sleep for 1s to empower redis implementation
