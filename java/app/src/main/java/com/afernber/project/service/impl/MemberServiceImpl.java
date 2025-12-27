@@ -2,9 +2,12 @@ package com.afernber.project.service.impl;
 
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.entity.MemberEntity;
+import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.MemberMapper;
 import com.afernber.project.repository.MemberRepository;
+import com.afernber.project.repository.PaymentRepository;
 import com.afernber.project.service.MemberService;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -19,33 +22,31 @@ import java.util.List;
 public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository repository;
+    private final PaymentRepository paymentRepository;
 
     private final MemberMapper mapper;
 
     private final RedisTemplate<String, Object> redisTemplate;
-
     private static final String CACHE_KEY_PREFIX = "memberRedis:";
 
     @Override
     public MemberDTO getMember(Long id) {
         String key = CACHE_KEY_PREFIX + id;
 
-        // 1. Try to fetch from Redis
         MemberDTO cachedMember = (MemberDTO) redisTemplate.opsForValue().get(key);
         if (cachedMember != null) {
             log.info("Redis HIT for Member ID: {}", id);
             return cachedMember;
         }
 
-        // 2. Cache MISS -> Perform slow DB fetch
         log.warn("Redis MISS for Member ID: {}. Fetching from DB...", id);
-        simulateLatency();
+        LatencyHelper.simulateLatency();
+
         MemberEntity member = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found with id: " + id));
 
         MemberDTO dto = mapper.toDto(member);
 
-        // 3. Store in Redis for future requests (Expire in 10 minutes)
         redisTemplate.opsForValue().set(key, dto, Duration.ofMinutes(10));
         log.info("Member ID: {} saved to Redis", id);
 
@@ -54,7 +55,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public List<MemberDTO> getMembers() {
-        simulateLatency();
+        LatencyHelper.simulateLatency();
 
         List<MemberEntity> members = repository.findAll();
 
@@ -64,6 +65,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    @Transactional
     public void createMember(MemberDTO member) {
         if (member == null) {
             throw new IllegalArgumentException("Member data cannot be null");
@@ -81,6 +83,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    @Transactional
     public MemberDTO updateMember(Long id, MemberDTO dto) {
         MemberEntity existing = validateUserExists(id);
 
@@ -95,8 +98,15 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
+    @Transactional
     public void deleteMember(Long id) {
         validateUserExists(id);
+
+        boolean hasPayments = paymentRepository.existsByMemberId(id);
+
+        if (hasPayments) {
+            throw new RuntimeException("Cannot delete member: This member has existing payment history.");
+        }
 
         repository.deleteById(id);
         evictCache(id);
@@ -109,23 +119,10 @@ public class MemberServiceImpl implements MemberService {
      * @param id member id to check in db
      * @return MemberEntity entity of the member in case is needed
      */
-    private MemberEntity validateUserExists(Long id){
+    private MemberEntity validateUserExists(Long id) {
         log.info("Check if member exists in DB: {}", id);
         return repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Member not found with id: " + id));
-    }
-
-    /*** Make the thread sleep for 1s to empower redis implementation
-     *
-     */
-    private void simulateLatency() {
-        try {
-            log.warn("Simulating slow database fetch... (1 second delay)");
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("Latency simulation interrupted", e);
-        }
     }
 
     private void evictCache(Long id) {
