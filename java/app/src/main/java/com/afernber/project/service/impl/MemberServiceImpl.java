@@ -1,11 +1,14 @@
 package com.afernber.project.service.impl;
 
+import com.afernber.project.domain.dto.EventDTO;
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.entity.MemberEntity;
+import com.afernber.project.helpers.JsonHelper;
 import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.MemberMapper;
 import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.repository.PaymentRepository;
+import com.afernber.project.service.KafkaProducerService;
 import com.afernber.project.service.MemberService;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
@@ -28,6 +31,8 @@ public class MemberServiceImpl implements MemberService {
 
     private final RedisTemplate<String, Object> redisTemplate;
     private static final String CACHE_KEY_PREFIX = "memberRedis:";
+
+    private final KafkaProducerService producerService;
 
     @Override
     public MemberDTO getMember(Long id) {
@@ -80,6 +85,10 @@ public class MemberServiceImpl implements MemberService {
 
         repository.save(memberEntity);
         log.info("Created member in DB: {}", member);
+
+        EventDTO event = new EventDTO(memberEntity.getId());
+
+        producerService.sendEvent("payments-events-topic", JsonHelper.toJson(event), "USER_CREATED");
     }
 
     @Override

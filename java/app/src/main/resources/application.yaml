@@ -25,7 +25,7 @@ spring:
   
   # 3. Kafka Connection (Service name: kafka_custom)
   kafka:
-    bootstrap-servers: "kafka_custom:29092"
+    bootstrap-servers: localhost:9092
     consumer:
       group-id: payment-group
       auto-offset-reset: earliest
