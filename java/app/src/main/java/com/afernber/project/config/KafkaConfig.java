@@ -73,10 +73,11 @@ public class KafkaConfig {
     public RetryTopicConfiguration retryTopicConfig(KafkaTemplate<String, String> template) {
         return RetryTopicConfigurationBuilder
                 .newInstance()
-                .maxAttempts(3) // Try 3 times before giving up
-                .fixedBackOff(2000) // Wait 2 seconds between retries
+                .maxAttempts(3)
+                .fixedBackOff(2000)
                 .includeTopic("payments-events-topic")
-                .dltHandlerMethod("mainKafkaConsumer", "handleDlt") // Point to a method in your consumer
+                .retryOn(Exception.class)
+                .dltHandlerMethod("kafkaConsumer", "handleDlt")
                 .create(template);
     }
 }

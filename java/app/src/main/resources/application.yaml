@@ -39,3 +39,7 @@ management:
   endpoint:
     prometheus:
       enabled: true
+
+app:
+  scheduling:
+    replay-cron: "0 */10 * * * *" # Every 1 minute for testing

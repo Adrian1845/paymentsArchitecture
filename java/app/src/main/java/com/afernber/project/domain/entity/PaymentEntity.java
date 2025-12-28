@@ -27,11 +27,8 @@ public class PaymentEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "payment_id")
     private Long id;
-
     private BigDecimal amount;
-
     private String currency;
-
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

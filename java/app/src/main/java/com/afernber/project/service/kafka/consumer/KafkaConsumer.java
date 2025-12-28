@@ -1,5 +1,6 @@
 package com.afernber.project.service.kafka.consumer;
 
+import com.afernber.project.service.FailedEventService;
 import com.afernber.project.service.kafka.factory.KafkaStrategyFactory;
 import com.afernber.project.service.kafka.strategies.KafkaStrategy;
 import lombok.AllArgsConstructor;
@@ -16,22 +17,28 @@ import org.springframework.stereotype.Service;
 public class KafkaConsumer {
 
     private final KafkaStrategyFactory strategyFactory;
-
+    private final FailedEventService failedEventService;
     @KafkaListener(topics = "payments-events-topic")
     public void listen(String message, @Header("event_type") String eventType) {
         log.info("Kafka Message Received | Type: {} | Payload: {}", eventType, message);
-
         try {
             KafkaStrategy strategy = strategyFactory.getStrategy(eventType);
             strategy.execute(message, eventType);
         } catch (Exception e) {
             log.error("Error processing Kafka event: {}", e.getMessage());
+            throw e;
         }
     }
 
     @DltHandler
-    public void handleDlt(String message, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("💀 DEAD LETTER ALERT: Message from topic {} moved to DLT. Content: {}", topic, message);
-        // TODO: handle event errors
+    public void handleDlt(String message,
+                          @Header(value = KafkaHeaders.RECEIVED_TOPIC, required = false) String topic,
+                          @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage,
+                          @Header("event_type") String eventType,
+                          @Header(value = "failed_event_id", required = false) Long existingId) {
+
+        log.error("💀 Moving failed event to DB from topic: {}", topic);
+
+        failedEventService.saveOrUpdateFailedEvent(message, topic, exceptionMessage, eventType, existingId);
     }
 }

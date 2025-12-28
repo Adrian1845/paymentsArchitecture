@@ -88,7 +88,7 @@ public class MemberServiceImpl implements MemberService {
 
         EventDTO event = new EventDTO(memberEntity.getId());
 
-        producerService.sendEvent("payments-events-topic", JsonHelper.toJson(event), "USER_CREATED");
+        producerService.sendEvent("payments-events-topic", JsonHelper.toJson(event), "USER_CREATED", null);
     }
 
     @Override
