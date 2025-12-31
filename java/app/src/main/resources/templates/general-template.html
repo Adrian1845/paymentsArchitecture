@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f4f7f6; padding-bottom: 40px; }
+        .main { background-color: #ffffff; margin: 20px auto; width: 100%; max-width: 600px; border-radius: 8px; border: 1px solid #e0e0e0; box-shadow: 0 4px 6px rgba(0,0,0,0.05); overflow: hidden; }
+        .header { background-color: #2c3e50; padding: 30px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .content { padding: 40px 30px; color: #333333; line-height: 1.6; }
+        .content h2 { color: #2c3e50; margin-top: 0; }
+        .button-container { text-align: center; margin: 30px 0; }
+        .button { background-color: #3498db; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block; }
+        .footer { text-align: center; padding: 20px; font-size: 12px; color: #777777; }
+        .divider { border-top: 1px solid #eeeeee; margin: 20px 0; }
+    </style>
+</head>
+<body>
+<div class="wrapper">
+    <div class="main">
+        <div class="header">
+            <h1 th:text="${businessName}">My Application</h1>
+        </div>
+
+        <div class="content">
+            <h2 th:text="${title}">Notice Title</h2>
+            <p th:text="'Hello ' + ${recipientName} + ','">Hello User,</p>
+            <p th:text="${message}">This is a general purpose message body where you can describe what happened or what action is needed.</p>
+
+            <div th:if="${ctaUrl}" class="button-container">
+                <a th:href="${ctaUrl}" class="button" th:text="${ctaText}">Take Action</a>
+            </div>
+
+            <div class="divider"></div>
+            <p>If you have any questions, feel free to contact our support team.</p>
+            <p>Best regards,<br><strong th:text="${businessName}">System Team</strong></p>
+        </div>
+    </div>
+
+    <div class="footer">
+        &copy; 2025 <span th:text="${businessName}">Company</span>. All rights reserved. <br>
+        You are receiving this because you have an active account or service with us.
+    </div>
+</div>
+</body>
+</html>

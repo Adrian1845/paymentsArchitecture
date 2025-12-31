@@ -6,11 +6,14 @@ import com.afernber.project.service.FailedEventService;
 import com.afernber.project.service.KafkaProducerService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @AllArgsConstructor
@@ -19,7 +22,7 @@ public class FailedEventServiceImpl implements FailedEventService {
 
     private final FailedEventRepository repository;
     private final KafkaProducerService producerService;
-
+    private final EmailServiceImpl emailService;
     @Override
     public void saveOrUpdateFailedEvent(String payload, String topic, String error, String type, Long existingId) {
         String mainTopic = topic;
@@ -47,6 +50,10 @@ public class FailedEventServiceImpl implements FailedEventService {
                     .build();
         }
 
+        if (entity.getStatus().equalsIgnoreCase("CRITICAL_FAILURE")) {
+            notifyCriticalFailure(entity);
+        }
+
         repository.save(entity);
     }
 
@@ -67,5 +74,26 @@ public class FailedEventServiceImpl implements FailedEventService {
         List<FailedEventEntity> pending = repository.findByStatus("PENDING_REPLAY");
         log.info("Starting replay for {} events...", pending.size());
         pending.forEach(event -> replayEvent(event.getId()));
+    }
+
+    private void notifyCriticalFailure(FailedEventEntity entity) {
+        // TODO Extract this to idk where but this is bs
+        Map<String, Object> model = new HashMap<>();
+        model.put("title", "Critical Failure");
+        model.put("eventType", entity.getEventType());
+        model.put("topic", entity.getSourceTopic());
+        model.put("errorMessage", entity.getErrorMessage());
+        // Convert the error string into a byte array attachment
+        String fullError = entity.getErrorMessage();
+        ByteArrayResource resource = new ByteArrayResource(fullError.getBytes());
+
+        emailService.sendHtmlEmail(
+                "test-email",
+                "Critical Error: " + entity.getEventType(),
+                "failed-event",
+                model,
+                "stacktrace.txt",
+                resource
+        );
     }
 }

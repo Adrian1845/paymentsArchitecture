@@ -30,7 +30,20 @@ spring:
       group-id: payment-group
       auto-offset-reset: earliest
 
-# 4. Observability (For Prometheus/Grafana)
+  # 4. Mail Properties
+  mail:
+    host: sandbox.smtp.mailtrap.io
+    port: 2525
+    username: 0c7394032e8e9d
+    password: e63b86187cd740
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true # This corresponds to 'tls = yes'
+
+# 5. Observability (For Prometheus/Grafana)
 management:
   endpoints:
     web:
@@ -39,6 +52,13 @@ management:
   endpoint:
     prometheus:
       enabled: true
+
+# 6. Logging
+logging:
+  level:
+    org.apache.kafka.common.config.AbstractConfig: WARN
+    org.apache.kafka.clients.consumer.ConsumerConfig: WARN
+    org.apache.kafka.clients.producer.ProducerConfig: WARN
 
 app:
   scheduling:
