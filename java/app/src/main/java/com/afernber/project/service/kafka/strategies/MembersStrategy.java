@@ -69,8 +69,8 @@ public class MembersStrategy implements KafkaStrategy {
                 EmailConstants.SUBJECT_ACTIVITY,
                 EmailConstants.TEMPLATE_GENERAL,
                 model,
-                null, // No attachment name
-                null  // No attachment source
+                null,
+                null
         );
     }
 

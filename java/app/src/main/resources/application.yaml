@@ -62,4 +62,4 @@ logging:
 
 app:
   scheduling:
-    replay-cron: "0 */10 * * * *" # Every 1 minute for testing
+    replay-cron: "0 */1 * * * *" # Every 1 minute for testing
