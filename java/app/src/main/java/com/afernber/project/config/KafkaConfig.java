@@ -1,5 +1,6 @@
 package com.afernber.project.config;
 
+import com.afernber.project.constant.KafkaConstants;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -30,7 +31,7 @@ public class KafkaConfig {
 
     @Bean
     public NewTopic appEventsTopic() {
-        return TopicBuilder.name("payments-events-topic")
+        return TopicBuilder.name(KafkaConstants.PAYMENTS_TOPIC)
                 .partitions(3)
                 .replicas(1)
                 .build();
@@ -75,7 +76,7 @@ public class KafkaConfig {
                 .newInstance()
                 .maxAttempts(3)
                 .fixedBackOff(2000)
-                .includeTopic("payments-events-topic")
+                .includeTopic(KafkaConstants.PAYMENTS_TOPIC)
                 .retryOn(Exception.class)
                 .dltHandlerMethod("kafkaConsumer", "handleDlt")
                 .create(template);
