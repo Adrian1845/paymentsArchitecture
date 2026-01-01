@@ -20,7 +20,7 @@ public class KafkaConsumer {
     private final KafkaStrategyFactory strategyFactory;
     private final FailedEventService failedEventService;
     @KafkaListener(topics = KafkaConstants.PAYMENTS_TOPIC)
-    public void listen(String message, @Header("event_type") String eventType) {
+    public void listen(String message, @Header(KafkaConstants.EVENT_TYPE) String eventType) {
         log.info("Kafka Message Received | Type: {} | Payload: {}", eventType, message);
         try {
             KafkaStrategy strategy = strategyFactory.getStrategy(eventType);
