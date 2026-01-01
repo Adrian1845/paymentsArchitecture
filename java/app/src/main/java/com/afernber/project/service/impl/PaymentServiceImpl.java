@@ -1,12 +1,18 @@
 package com.afernber.project.service.impl;
 
+import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.KafkaConstants;
+import com.afernber.project.constant.RedisConstants;
 import com.afernber.project.domain.dto.PaymentDTO;
+import com.afernber.project.domain.dto.PaymentEventDTO;
 import com.afernber.project.domain.entity.MemberEntity;
 import com.afernber.project.domain.entity.PaymentEntity;
+import com.afernber.project.helpers.JsonHelper;
 import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.PaymentMapper;
 import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.repository.PaymentRepository;
+import com.afernber.project.service.KafkaProducerService;
 import com.afernber.project.service.PaymentService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -20,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @AllArgsConstructor
@@ -31,8 +38,8 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentMapper mapper;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final KafkaProducerService producerService;
 
-    private static final String CACHE_KEY_MEMBER_PAYMENTS = "memberPayments:";
     @Override
     public PaymentDTO getPayment(Long id) {
         return paymentRepository.findById(id)
@@ -50,7 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public List<PaymentDTO> getPaymentsByMember(Long memberId) {
-        String key = CACHE_KEY_MEMBER_PAYMENTS + memberId;
+        String key = RedisConstants.PAYMENT_REDIS + memberId;
         Object rawData = redisTemplate.opsForValue().get(key);
 
         ObjectMapper objectMapper = new ObjectMapper();
@@ -98,12 +105,19 @@ public class PaymentServiceImpl implements PaymentService {
             entity.setId(null);
         }
 
-        paymentRepository.save(entity);
+        PaymentDTO saved = mapper.toDto(paymentRepository.save(entity));
 
         evictMemberPaymentsCache(dto.memberId());
 
+        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(buildPaymentEvent(saved, member)),
+                EventTypeConstants.PAYMENT_CREATED,
+                null
+        );
         log.info("Payment created and cache evicted for member: {}", dto.memberId());
     }
+
+
 
     @Override
     @Transactional
@@ -111,17 +125,40 @@ public class PaymentServiceImpl implements PaymentService {
         PaymentEntity existing = paymentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
 
-        existing.setAmount(dto.amount());
-        existing.setCurrency(dto.currency());
+        Optional.ofNullable(dto.amount()).ifPresent(existing::setAmount);
+        Optional.ofNullable(dto.currency())
+                .filter(c -> !c.isBlank())
+                .ifPresent(existing::setCurrency);
 
-        if (!existing.getMember().getId().equals(dto.memberId())) {
-            MemberEntity newMember = memberRepository.findById(dto.memberId())
+        Long newMemberId = dto.memberId();
+        Long currentMemberId = Optional.ofNullable(existing.getMember())
+                .map(MemberEntity::getId)
+                .orElse(null);
+
+        if (newMemberId != null && !newMemberId.equals(currentMemberId)) {
+            MemberEntity newMember = memberRepository.findById(newMemberId)
                     .orElseThrow(() -> new RuntimeException("New member not found"));
             existing.setMember(newMember);
         }
 
         PaymentEntity updated = paymentRepository.save(existing);
-        return mapper.toDto(updated);
+
+        evictMemberPaymentsCache(currentMemberId);
+        if (newMemberId != null && !newMemberId.equals(currentMemberId)) {
+            evictMemberPaymentsCache(newMemberId);
+        }
+
+        PaymentDTO updatedDto = mapper.toDto(updated);
+        MemberEntity finalMember = updated.getMember();
+
+        producerService.sendEvent(
+                KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(buildPaymentEvent(updatedDto, finalMember)),
+                EventTypeConstants.PAYMENT_UPDATED,
+                null
+        );
+
+        return updatedDto;
     }
 
     @Override
@@ -132,11 +169,25 @@ public class PaymentServiceImpl implements PaymentService {
 
         Long memberId = payment.getMember().getId();
         paymentRepository.delete(payment);
+        PaymentDTO dto = mapper.toDto(payment);
+
+        MemberEntity member = memberRepository.findById(dto.memberId())
+                .orElseThrow(() -> new RuntimeException("Member not found"));
+
+        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(buildPaymentEvent(dto, member)),
+                EventTypeConstants.PAYMENT_DELETED,
+                null
+        );
 
         evictMemberPaymentsCache(memberId);
     }
 
+    private PaymentEventDTO buildPaymentEvent(PaymentDTO dto, MemberEntity member) {
+        return new PaymentEventDTO(dto.id(), dto.memberId(), member.getEmail(), dto.amount());
+    }
+
     private void evictMemberPaymentsCache(Long memberId) {
-        redisTemplate.delete(CACHE_KEY_MEMBER_PAYMENTS + memberId);
+        redisTemplate.delete(RedisConstants.PAYMENT_REDIS + memberId);
     }
 }

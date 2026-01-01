@@ -5,7 +5,7 @@ import com.afernber.project.domain.dto.MemberDTO;
 import java.util.List;
 
 public interface MemberService {
-    MemberDTO getMember(Long Id);
+    MemberDTO getMember(Long id);
 
     List<MemberDTO> getMembers();
 
