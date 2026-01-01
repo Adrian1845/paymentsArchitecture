@@ -1,5 +1,6 @@
 package com.afernber.project.domain.entity;
 
+import com.afernber.project.constant.EventTypeConstants;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
@@ -30,7 +31,7 @@ public class FailedEventEntity {
     private String errorMessage;
 
     @Builder.Default
-    private String status = "PENDING_REPLAY";
+    private String status = EventTypeConstants.PENDING_REPLAY;
 
     @Column(nullable = false)
     private LocalDateTime occurredAt;

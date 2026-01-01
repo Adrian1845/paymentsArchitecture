@@ -1,5 +1,6 @@
 package com.afernber.project.service.impl;
 
+import com.afernber.project.constant.EmailConstants;
 import com.afernber.project.service.EmailService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -48,7 +49,7 @@ public class EmailServiceImpl implements EmailService {
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
-            helper.setFrom("desalaj311@dubokutv.com");
+            helper.setFrom(EmailConstants.FROM);
 
             if (attachmentSource != null && attachmentName != null) {
                 helper.addAttachment(attachmentName, attachmentSource);

@@ -4,5 +4,5 @@ import java.util.List;
 
 public interface KafkaStrategy {
     void execute(String message, String eventType   );
-    List<String> getSupportedTypes(); // Identifies if it's 'USER_CREATED' or 'PAYMENT_MADE'
+    List<String> getSupportedTypes();
 }

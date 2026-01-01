@@ -1,5 +1,6 @@
 package com.afernber.project.service.kafka.consumer;
 
+import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.service.FailedEventService;
 import com.afernber.project.service.kafka.factory.KafkaStrategyFactory;
 import com.afernber.project.service.kafka.strategies.KafkaStrategy;
@@ -18,7 +19,7 @@ public class KafkaConsumer {
 
     private final KafkaStrategyFactory strategyFactory;
     private final FailedEventService failedEventService;
-    @KafkaListener(topics = "payments-events-topic")
+    @KafkaListener(topics = KafkaConstants.PAYMENTS_TOPIC)
     public void listen(String message, @Header("event_type") String eventType) {
         log.info("Kafka Message Received | Type: {} | Payload: {}", eventType, message);
         try {
@@ -34,8 +35,8 @@ public class KafkaConsumer {
     public void handleDlt(String message,
                           @Header(value = KafkaHeaders.RECEIVED_TOPIC, required = false) String topic,
                           @Header(value = KafkaHeaders.EXCEPTION_MESSAGE, required = false) String exceptionMessage,
-                          @Header("event_type") String eventType,
-                          @Header(value = "failed_event_id", required = false) Long existingId) {
+                          @Header(KafkaConstants.EVENT_TYPE) String eventType,
+                          @Header(value = KafkaConstants.FAILED_EVENT_ID, required = false) Long existingId) {
 
         log.error("💀 Moving failed event to DB from topic: {}", topic);
 

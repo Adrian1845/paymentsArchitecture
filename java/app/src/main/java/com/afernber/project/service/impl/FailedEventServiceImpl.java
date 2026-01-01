@@ -1,5 +1,8 @@
 package com.afernber.project.service.impl;
 
+import com.afernber.project.constant.EmailConstants;
+import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.domain.entity.FailedEventEntity;
 import com.afernber.project.repository.FailedEventRepository;
 import com.afernber.project.service.FailedEventService;
@@ -26,8 +29,8 @@ public class FailedEventServiceImpl implements FailedEventService {
     @Override
     public void saveOrUpdateFailedEvent(String payload, String topic, String error, String type, Long existingId) {
         String mainTopic = topic;
-        if (topic != null && topic.endsWith("-dlt")) {
-            mainTopic = topic.replace("-dlt", "");
+        if (topic != null && topic.endsWith(KafkaConstants.DLT)) {
+            mainTopic = topic.replace(KafkaConstants.DLT, "");
         }
 
         FailedEventEntity entity;
@@ -37,7 +40,7 @@ public class FailedEventServiceImpl implements FailedEventService {
             entity.setErrorMessage(error);
             entity.setRetryCount(entity.getRetryCount() + 1);
             entity.setOccurredAt(LocalDateTime.now());
-            entity.setStatus(entity.getRetryCount() >= 5 ? "CRITICAL_FAILURE" : "PENDING_REPLAY");
+            entity.setStatus(entity.getRetryCount() >= 5 ? EventTypeConstants.CRITICAL_FAILURE : EventTypeConstants.PENDING_REPLAY);
         } else {
             entity = FailedEventEntity.builder()
                     .payload(payload)
@@ -46,11 +49,11 @@ public class FailedEventServiceImpl implements FailedEventService {
                     .eventType(type)
                     .occurredAt(LocalDateTime.now())
                     .retryCount(0)
-                    .status("PENDING_REPLAY")
+                    .status(EventTypeConstants.PENDING_REPLAY)
                     .build();
         }
 
-        if (entity.getStatus().equalsIgnoreCase("CRITICAL_FAILURE")) {
+        if (entity.getStatus().equalsIgnoreCase(EventTypeConstants.CRITICAL_FAILURE)) {
             notifyCriticalFailure(entity);
         }
 
@@ -64,35 +67,34 @@ public class FailedEventServiceImpl implements FailedEventService {
 
         producerService.sendEvent(event.getSourceTopic(), event.getPayload(), event.getEventType(), event.getId());
 
-        event.setStatus("REPLAYED");
+        event.setStatus(EventTypeConstants.REPLAYED);
         repository.save(event);
     }
 
     @Transactional
     @Override
     public void replayAllEvents() {
-        List<FailedEventEntity> pending = repository.findByStatus("PENDING_REPLAY");
+        List<FailedEventEntity> pending = repository.findByStatus(EventTypeConstants.PENDING_REPLAY);
         log.info("Starting replay for {} events...", pending.size());
         pending.forEach(event -> replayEvent(event.getId()));
     }
 
     private void notifyCriticalFailure(FailedEventEntity entity) {
-        // TODO Extract this to idk where but this is bs
         Map<String, Object> model = new HashMap<>();
-        model.put("title", "Critical Failure");
-        model.put("eventType", entity.getEventType());
-        model.put("topic", entity.getSourceTopic());
-        model.put("errorMessage", entity.getErrorMessage());
-        // Convert the error string into a byte array attachment
+        model.put(EmailConstants.TITLE, EmailConstants.SUBJECT_CRITICAL_ERROR);
+        model.put(EmailConstants.EVENT_TYPE, entity.getEventType());
+        model.put(EmailConstants.TOPIC, entity.getSourceTopic());
+        model.put(EmailConstants.ERROR_MESSAGE, entity.getErrorMessage());
+
         String fullError = entity.getErrorMessage();
         ByteArrayResource resource = new ByteArrayResource(fullError.getBytes());
 
         emailService.sendHtmlEmail(
-                "test-email",
-                "Critical Error: " + entity.getEventType(),
-                "failed-event",
+                EmailConstants.MAINTENANCE_EMAIL,
+                EmailConstants.SUBJECT_CRITICAL_ERROR + " " + entity.getEventType(),
+                EmailConstants.TEMPLATE_ERROR,
                 model,
-                "stacktrace.txt",
+                EmailConstants.ATTACHMENT_FILE,
                 resource
         );
     }

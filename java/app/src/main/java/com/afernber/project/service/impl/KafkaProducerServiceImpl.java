@@ -1,5 +1,6 @@
 package com.afernber.project.service.impl;
 
+import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.service.KafkaProducerService;
 import lombok.AllArgsConstructor;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -18,10 +19,10 @@ public class KafkaProducerServiceImpl implements KafkaProducerService {
         MessageBuilder<String> builder = MessageBuilder
                 .withPayload(payload)
                 .setHeader(KafkaHeaders.TOPIC, topic)
-                .setHeader("event_type", eventType);
+                .setHeader(KafkaConstants.EVENT_TYPE, eventType);
 
         if (originalId != null) {
-            builder.setHeader("failed_event_id", originalId);
+            builder.setHeader(KafkaConstants.FAILED_EVENT_ID, originalId);
         }
 
         kafkaTemplate.send(builder.build());

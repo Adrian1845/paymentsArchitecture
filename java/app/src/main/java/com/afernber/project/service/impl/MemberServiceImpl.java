@@ -1,6 +1,8 @@
 package com.afernber.project.service.impl;
 
-import com.afernber.project.domain.dto.EventDTO;
+import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.KafkaConstants;
+import com.afernber.project.constant.RedisConstants;
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.entity.MemberEntity;
 import com.afernber.project.helpers.JsonHelper;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 @AllArgsConstructor
 @Slf4j
@@ -26,17 +29,14 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository repository;
     private final PaymentRepository paymentRepository;
-
     private final MemberMapper mapper;
 
     private final RedisTemplate<String, Object> redisTemplate;
-    private static final String CACHE_KEY_PREFIX = "memberRedis:";
-
     private final KafkaProducerService producerService;
 
     @Override
     public MemberDTO getMember(Long id) {
-        String key = CACHE_KEY_PREFIX + id;
+        String key = RedisConstants.MEMBER_REDIS + id;
 
         MemberDTO cachedMember = (MemberDTO) redisTemplate.opsForValue().get(key);
         if (cachedMember != null) {
@@ -86,9 +86,11 @@ public class MemberServiceImpl implements MemberService {
         repository.save(memberEntity);
         log.info("Created member in DB: {}", member);
 
-        EventDTO event = new EventDTO(memberEntity.getId());
-
-        producerService.sendEvent("payments-events-topic", JsonHelper.toJson(event), "USER_CREATED", null);
+        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(member.id()),
+                EventTypeConstants.USER_CREATED,
+                null
+        );
     }
 
     @Override
@@ -96,20 +98,30 @@ public class MemberServiceImpl implements MemberService {
     public MemberDTO updateMember(Long id, MemberDTO dto) {
         MemberEntity existing = validateUserExists(id);
 
-        existing.setName(dto.name());
-        existing.setEmail(dto.email());
+        Optional.ofNullable(dto.name())
+                .filter(name -> !name.isBlank())
+                .ifPresent(existing::setName);
+
+        Optional.ofNullable(dto.email())
+                .filter(email -> !email.isBlank())
+                .ifPresent(existing::setEmail);
 
         MemberEntity updated = repository.save(existing);
         evictCache(id);
         log.info("Updated member in DB: {}", id);
 
+        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(id),
+                EventTypeConstants.USER_UPDATED,
+                null)
+        ;
         return mapper.toDto(updated);
     }
 
     @Override
     @Transactional
     public void deleteMember(Long id) {
-        validateUserExists(id);
+        MemberDTO member = mapper.toDto(validateUserExists(id));
 
         boolean hasPayments = paymentRepository.existsByMemberId(id);
 
@@ -119,6 +131,12 @@ public class MemberServiceImpl implements MemberService {
 
         repository.deleteById(id);
         evictCache(id);
+
+        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                JsonHelper.toJson(member),
+                EventTypeConstants.USER_DELETED,
+                null
+        );
 
         log.info("🗑Deleted member from DB: {}", id);
     }
@@ -135,6 +153,6 @@ public class MemberServiceImpl implements MemberService {
     }
 
     private void evictCache(Long id) {
-        redisTemplate.delete(CACHE_KEY_PREFIX + id);
+        redisTemplate.delete(RedisConstants.MEMBER_REDIS + id);
     }
 }
