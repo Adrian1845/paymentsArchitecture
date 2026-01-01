@@ -49,7 +49,7 @@ public class MembersStrategy implements KafkaStrategy {
     }
 
     private void processMemberActivity(String message, String actionName, String emailMessageContent) {
-        log.info("handle{}: {}", actionName, message);
+        log.info("handle {}: {}", actionName, message);
 
         MemberDTO memberDTO = findMember(message);
 

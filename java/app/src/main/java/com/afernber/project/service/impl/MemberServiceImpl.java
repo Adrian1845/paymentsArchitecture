@@ -79,15 +79,15 @@ public class MemberServiceImpl implements MemberService {
         MemberEntity memberEntity = mapper.toEntity(member);
 
         if (memberEntity.getId() != null) {
-            log.info("Manual ID {} provided. Setting to null to let DB generate ID and avoid StaleObject error.", member.id());
+            log.info("Manual ID {} provided. Setting to null to let DB generate ID and avoid StaleObject error. ", member.id());
             memberEntity.setId(null);
         }
 
-        repository.save(memberEntity);
-        log.info("Created member in DB: {}", member);
+        MemberDTO memberDTO = mapper.toDto(repository.save(memberEntity));
+        log.info("Created member in DB: {} ", member);
 
         producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
-                JsonHelper.toJson(member.id()),
+                JsonHelper.toJson(memberDTO),
                 EventTypeConstants.USER_CREATED,
                 null
         );
@@ -106,16 +106,16 @@ public class MemberServiceImpl implements MemberService {
                 .filter(email -> !email.isBlank())
                 .ifPresent(existing::setEmail);
 
-        MemberEntity updated = repository.save(existing);
+        MemberDTO updated = mapper.toDto(repository.save(existing));
         evictCache(id);
         log.info("Updated member in DB: {}", id);
 
         producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
-                JsonHelper.toJson(id),
+                JsonHelper.toJson(updated),
                 EventTypeConstants.USER_UPDATED,
                 null)
         ;
-        return mapper.toDto(updated);
+        return updated;
     }
 
     @Override
