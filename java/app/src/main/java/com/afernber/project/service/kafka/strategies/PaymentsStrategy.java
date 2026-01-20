@@ -2,9 +2,12 @@ package com.afernber.project.service.kafka.strategies;
 
 import com.afernber.project.constant.EmailConstants;
 import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.ExceptionConstants;
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.dto.PaymentDTO;
 import com.afernber.project.domain.dto.PaymentEventDTO;
+import com.afernber.project.exception.kafka.KafkaErrorCode;
+import com.afernber.project.exception.kafka.KafkaException;
 import com.afernber.project.mappers.MemberMapper;
 import com.afernber.project.mappers.PaymentMapper;
 import com.afernber.project.repository.MemberRepository;
@@ -92,7 +95,10 @@ public class PaymentsStrategy implements KafkaStrategy {
         PaymentEventDTO dto = getPaymentEvent(message);
         return memberRepository.findById(dto.userId())
                 .map(memberMapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Cannot send payment email: Member ID " + dto.userId() + " not found."));
+                .orElseThrow(() -> new KafkaException(
+                        KafkaErrorCode.CANNOT_SEND_EMAIL,
+                        String.format(ExceptionConstants.NOT_FOUND_MSG, ExceptionConstants.MEMBER_MSG, dto.userId())
+                        ));
     }
 
     private PaymentDTO findPayment(String message){
@@ -111,7 +117,7 @@ public class PaymentsStrategy implements KafkaStrategy {
             return om.readValue(message, PaymentEventDTO.class);
         } catch (JsonProcessingException e) {
             log.error("Failed to parse Payment Kafka message: {}", message);
-            throw new RuntimeException("Json Error", e);
+            throw new KafkaException(KafkaErrorCode.COULD_NOT_PROCESS_JSON, e.getMessage());
         }
     }
 }

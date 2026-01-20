@@ -2,6 +2,7 @@ package com.afernber.project.constant;
 
 public final class EventTypeConstants {
     private EventTypeConstants() {}
+
     public static final String CRITICAL_FAILURE = "CRITICAL_FAILURE";
     public static final String PENDING_REPLAY = "PENDING_REPLAY";
     public static final String REPLAYED = "REPLAYED";

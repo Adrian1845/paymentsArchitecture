@@ -1,12 +1,17 @@
 package com.afernber.project.service.impl;
 
 import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.ExceptionConstants;
 import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.constant.RedisConstants;
 import com.afernber.project.domain.dto.PaymentDTO;
 import com.afernber.project.domain.dto.PaymentEventDTO;
 import com.afernber.project.domain.entity.MemberEntity;
 import com.afernber.project.domain.entity.PaymentEntity;
+import com.afernber.project.exception.member.MemberErrorCode;
+import com.afernber.project.exception.member.MemberException;
+import com.afernber.project.exception.payment.PaymentErrorCode;
+import com.afernber.project.exception.payment.PaymentException;
 import com.afernber.project.helpers.JsonHelper;
 import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.PaymentMapper;
@@ -44,7 +49,10 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentDTO getPayment(Long id) {
         return paymentRepository.findById(id)
                 .map(mapper::toDto)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+                .orElseThrow(() -> new PaymentException(
+                        PaymentErrorCode.PAYMENT_NOT_FOUND,
+                        String.format(ExceptionConstants.NOT_FOUND_MSG, ExceptionConstants.PAYMENT_MSG, id)
+                ));
     }
 
     @Override
@@ -94,8 +102,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void createPayment(PaymentDTO dto) {
-        MemberEntity member = memberRepository.findById(dto.memberId())
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+        MemberEntity member = findMember(dto.memberId());
 
         PaymentEntity entity = mapper.toEntity(dto);
         entity.setMember(member);
@@ -122,8 +129,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public PaymentDTO updatePayment(Long id, PaymentDTO dto) {
-        PaymentEntity existing = paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+        PaymentEntity existing = findPayment(id);
 
         Optional.ofNullable(dto.amount()).ifPresent(existing::setAmount);
         Optional.ofNullable(dto.currency())
@@ -136,8 +142,7 @@ public class PaymentServiceImpl implements PaymentService {
                 .orElse(null);
 
         if (newMemberId != null && !newMemberId.equals(currentMemberId)) {
-            MemberEntity newMember = memberRepository.findById(newMemberId)
-                    .orElseThrow(() -> new RuntimeException("New member not found"));
+            MemberEntity newMember = findMember(newMemberId);
             existing.setMember(newMember);
         }
 
@@ -164,15 +169,13 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional
     public void deletePayment(Long id) {
-        PaymentEntity payment = paymentRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Payment not found"));
+        PaymentEntity payment = findPayment(id);
 
         Long memberId = payment.getMember().getId();
         paymentRepository.delete(payment);
         PaymentDTO dto = mapper.toDto(payment);
 
-        MemberEntity member = memberRepository.findById(dto.memberId())
-                .orElseThrow(() -> new RuntimeException("Member not found"));
+        MemberEntity member = findMember(dto.memberId());
 
         producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
                 JsonHelper.toJson(buildPaymentEvent(dto, member)),
@@ -181,6 +184,22 @@ public class PaymentServiceImpl implements PaymentService {
         );
 
         evictMemberPaymentsCache(memberId);
+    }
+
+    private PaymentEntity findPayment(Long id) {
+        return paymentRepository.findById(id)
+                .orElseThrow(() -> new PaymentException(
+                        PaymentErrorCode.PAYMENT_NOT_FOUND,
+                        String.format(ExceptionConstants.NOT_FOUND_MSG, ExceptionConstants.PAYMENT_MSG, id)
+                ));
+    }
+
+    private MemberEntity findMember(Long id) {
+        return memberRepository.findById(id)
+                .orElseThrow(() -> new MemberException(
+                        MemberErrorCode.MEMBER_NOT_FOUND,
+                        String.format(ExceptionConstants.NOT_FOUND_MSG, ExceptionConstants.MEMBER_MSG, id)
+                ));
     }
 
     private PaymentEventDTO buildPaymentEvent(PaymentDTO dto, MemberEntity member) {

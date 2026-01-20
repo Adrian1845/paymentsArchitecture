@@ -1,5 +1,7 @@
 package com.afernber.project.service.kafka.factory;
 
+import com.afernber.project.exception.kafka.KafkaErrorCode;
+import com.afernber.project.exception.kafka.KafkaException;
 import com.afernber.project.service.kafka.strategies.KafkaStrategy;
 import org.springframework.stereotype.Component;
 
@@ -23,6 +25,6 @@ public class KafkaStrategyFactory {
 
     public KafkaStrategy getStrategy(String eventType) {
         return Optional.ofNullable(strategyMap.get(eventType))
-                .orElseThrow(() -> new RuntimeException("No strategy for: " + eventType));
+                .orElseThrow(() -> new KafkaException(KafkaErrorCode.EVENT_TYPE_NOT_SUPPORTED, eventType));
     }
 }
