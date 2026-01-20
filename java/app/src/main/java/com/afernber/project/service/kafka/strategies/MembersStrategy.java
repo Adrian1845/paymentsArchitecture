@@ -3,6 +3,8 @@ package com.afernber.project.service.kafka.strategies;
 import com.afernber.project.constant.EmailConstants;
 import com.afernber.project.constant.EventTypeConstants;
 import com.afernber.project.domain.dto.MemberDTO;
+import com.afernber.project.exception.kafka.KafkaErrorCode;
+import com.afernber.project.exception.kafka.KafkaException;
 import com.afernber.project.mappers.MemberMapper;
 import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.service.impl.EmailServiceImpl;
@@ -87,7 +89,7 @@ public class MembersStrategy implements KafkaStrategy {
                     });
         } catch (JsonProcessingException e) {
             log.error("Failed to parse Kafka message: {}", message);
-            throw new RuntimeException("Json Error", e);
+            throw new KafkaException(KafkaErrorCode.COULD_NOT_PROCESS_JSON, e.getMessage());
         }
     }
 }

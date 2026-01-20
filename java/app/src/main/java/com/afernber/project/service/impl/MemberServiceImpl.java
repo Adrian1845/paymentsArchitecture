@@ -1,10 +1,13 @@
 package com.afernber.project.service.impl;
 
 import com.afernber.project.constant.EventTypeConstants;
+import com.afernber.project.constant.ExceptionConstants;
 import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.constant.RedisConstants;
+import com.afernber.project.exception.member.MemberErrorCode;
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.entity.MemberEntity;
+import com.afernber.project.exception.member.MemberException;
 import com.afernber.project.helpers.JsonHelper;
 import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.MemberMapper;
@@ -12,6 +15,7 @@ import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.repository.PaymentRepository;
 import com.afernber.project.service.KafkaProducerService;
 import com.afernber.project.service.MemberService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,8 +51,7 @@ public class MemberServiceImpl implements MemberService {
         log.warn("Redis MISS for Member ID: {}. Fetching from DB...", id);
         LatencyHelper.simulateLatency();
 
-        MemberEntity member = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member not found with id: " + id));
+        MemberEntity member = validateUserExists(id);
 
         MemberDTO dto = mapper.toDto(member);
 
@@ -73,7 +76,7 @@ public class MemberServiceImpl implements MemberService {
     @Transactional
     public void createMember(MemberDTO member) {
         if (member == null) {
-            throw new IllegalArgumentException("Member data cannot be null");
+            throw new MemberException(MemberErrorCode.INVALID_MEMBER_DATA);
         }
 
         MemberEntity memberEntity = mapper.toEntity(member);
@@ -82,15 +85,21 @@ public class MemberServiceImpl implements MemberService {
             log.info("Manual ID {} provided. Setting to null to let DB generate ID and avoid StaleObject error. ", member.id());
             memberEntity.setId(null);
         }
+        try {
+            MemberDTO memberDTO = mapper.toDto(repository.save(memberEntity));
 
-        MemberDTO memberDTO = mapper.toDto(repository.save(memberEntity));
-        log.info("Created member in DB: {} ", member);
+            log.info("Created member in DB: {} ", member);
 
-        producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
-                JsonHelper.toJson(memberDTO),
-                EventTypeConstants.USER_CREATED,
-                null
-        );
+            producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
+                    JsonHelper.toJson(memberDTO),
+                    EventTypeConstants.USER_CREATED,
+                    null
+            );
+        } catch (DataIntegrityViolationException ex) {
+            throw new MemberException(MemberErrorCode.INVALID_MEMBER_DATA);
+        }
+
+
     }
 
     @Override
@@ -113,8 +122,8 @@ public class MemberServiceImpl implements MemberService {
         producerService.sendEvent(KafkaConstants.PAYMENTS_TOPIC,
                 JsonHelper.toJson(updated),
                 EventTypeConstants.USER_UPDATED,
-                null)
-        ;
+                null
+        );
         return updated;
     }
 
@@ -126,7 +135,10 @@ public class MemberServiceImpl implements MemberService {
         boolean hasPayments = paymentRepository.existsByMemberId(id);
 
         if (hasPayments) {
-            throw new RuntimeException("Cannot delete member: This member has existing payment history.");
+            throw new MemberException(
+                    MemberErrorCode.MEMBER_DELETION_FORBIDDEN,
+                    String.format(ExceptionConstants.MEMBER_HAS_PAYMENTS_MSG, id)
+            );
         }
 
         repository.deleteById(id);
@@ -149,7 +161,10 @@ public class MemberServiceImpl implements MemberService {
     private MemberEntity validateUserExists(Long id) {
         log.info("Check if member exists in DB: {}", id);
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Member not found with id: " + id));
+                .orElseThrow(() -> new MemberException(
+                        MemberErrorCode.MEMBER_NOT_FOUND,
+                        String.format(ExceptionConstants.NOT_FOUND_MSG, ExceptionConstants.MEMBER_MSG, id)
+                ));
     }
 
     private void evictCache(Long id) {
