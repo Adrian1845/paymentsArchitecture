@@ -10,6 +10,7 @@ import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.service.impl.EmailServiceImpl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -53,13 +54,13 @@ public class MembersStrategy implements KafkaStrategy {
     private void processMemberActivity(String message, String actionName, String emailMessageContent) {
         log.info("handle {}: {}", actionName, message);
 
-        MemberDTO memberDTO = findMember(message);
+        MemberDTO member = findMember(message);
 
         Map<String, Object> model = new HashMap<>();
-        model.put(EmailConstants.RECIPIENT_NAME, memberDTO.name());
+        model.put(EmailConstants.RECIPIENT_NAME, member.name());
         model.put(EmailConstants.MESSAGE, emailMessageContent);
 
-        notify(memberDTO.email(), model);
+        notify(member.email(), model);
     }
 
     private void notify(String to, Map<String, Object> model) {
@@ -78,6 +79,7 @@ public class MembersStrategy implements KafkaStrategy {
 
     private MemberDTO findMember(String message) {
         ObjectMapper om = new ObjectMapper();
+        om.registerModule(new JavaTimeModule());
         try {
             MemberDTO eventData = om.readValue(message, MemberDTO.class);
 

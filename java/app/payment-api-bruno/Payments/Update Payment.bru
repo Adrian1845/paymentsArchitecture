@@ -1,0 +1,22 @@
+meta {
+  name: Update Payment
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{base_url}}/payments/8
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "amount": 321.00,
+    "currency": "EUR"
+  }
+}

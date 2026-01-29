@@ -1,6 +1,6 @@
 package com.afernber.project.exception;
 
-import com.afernber.project.domain.dto.response.ErrorResponse;
+import com.afernber.project.domain.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

@@ -29,6 +29,8 @@ public class PaymentEntity {
     private Long id;
     private BigDecimal amount;
     private String currency;
+    
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)

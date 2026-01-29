@@ -1,0 +1,15 @@
+meta {
+  name: Delete Member
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/members/41
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

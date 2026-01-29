@@ -1,4 +1,4 @@
-package com.afernber.project.domain.dto.response;
+package com.afernber.project.domain.response;
 
 import java.time.LocalDateTime;
 
