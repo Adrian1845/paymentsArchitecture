@@ -20,6 +20,8 @@
 		<lombok.version>1.18.30</lombok.version>
 		<jjwt.version>0.12.6</jjwt.version>
 		<sonar.organization>adrian1845</sonar.organization>
+		<sonar.projectKey>Adrian1845_paymentsArchitecture</sonar.projectKey>
+		<sonar.host.url>https://sonarcloud.io</sonar.host.url>
 	</properties>
 
 	<dependencies>
