@@ -19,6 +19,7 @@
 		<org.mapstruct.version>1.6.3</org.mapstruct.version>
 		<lombok.version>1.18.30</lombok.version>
 		<jjwt.version>0.12.6</jjwt.version>
+		<sonar.organization>adrian1845</sonar.organization>
 	</properties>
 
 	<dependencies>
@@ -152,6 +153,13 @@
 					</annotationProcessorPaths>
 				</configuration>
 			</plugin>
+
+			<plugin>
+				<groupId>org.sonarsource.scanner.maven</groupId>
+				<artifactId>sonar-maven-plugin</artifactId>
+				<version>${sonar-plugin.version}</version>
+			</plugin>
+
 		</plugins>
 	</build>
 </project>

@@ -36,7 +36,7 @@ services:
 
   kafka:
     build: ./kafka
-    container_name: kafka_custom
+    container_name: kafka
     ports:
       - "9092:9092"   # External access for Windows
       - "29092:29092" # Internal access for other containers
