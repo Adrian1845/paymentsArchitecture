@@ -1,0 +1,22 @@
+meta {
+  name: Update Member
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{base_url}}/members/41
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "name": "Alicia",
+    "email": "alisd@example.com"
+  }
+}

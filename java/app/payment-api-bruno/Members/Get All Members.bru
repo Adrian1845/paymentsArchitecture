@@ -1,0 +1,15 @@
+meta {
+  name: Get All Members
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/members
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

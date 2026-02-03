@@ -1,0 +1,15 @@
+meta {
+  name: Get Payments by Member
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/payments/member/7
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

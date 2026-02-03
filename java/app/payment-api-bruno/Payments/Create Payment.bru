@@ -1,0 +1,23 @@
+meta {
+  name: Create Payment
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/payments
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "memberId": 42,
+    "amount": 100.50,
+    "currency": "USD"
+  }
+}

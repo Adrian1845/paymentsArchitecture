@@ -1,6 +1,6 @@
 package com.afernber.project.controller;
 
-import com.afernber.project.domain.dto.response.ActionResponse;
+import com.afernber.project.domain.response.ActionResponse;
 import com.afernber.project.service.FailedEventService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

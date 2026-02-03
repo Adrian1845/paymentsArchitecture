@@ -1,0 +1,15 @@
+meta {
+  name: Get All Payments
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/payments
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

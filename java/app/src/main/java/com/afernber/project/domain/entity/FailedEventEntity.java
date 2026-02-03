@@ -18,24 +18,25 @@ public class FailedEventEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "event_type", nullable = false)
     private String eventType;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String payload;
 
-    @Column(nullable = false)
+    @Column(name = "source_topic", nullable = false)
     private String sourceTopic;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
     @Builder.Default
     private String status = EventTypeConstants.PENDING_REPLAY;
 
-    @Column(nullable = false)
+    @Column(name = "occurred_at", nullable = false)
     private LocalDateTime occurredAt;
 
+    @Column(name = "retry_count")
     private Integer retryCount;
 
     @PrePersist

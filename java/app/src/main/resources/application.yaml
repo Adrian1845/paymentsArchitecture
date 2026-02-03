@@ -60,6 +60,11 @@ logging:
     org.apache.kafka.clients.consumer.ConsumerConfig: WARN
     org.apache.kafka.clients.producer.ProducerConfig: WARN
 
+
+jwt:
+  secret: your_very_long_and_very_secure_secret_key_that_is_at_least_32_characters
+  expiration: 86400000
+
 app:
   scheduling:
-    replay-cron: "0 */1 * * * *" # Every 1 minute for testing
+    replay-cron: "0 */10 * * * *" # Every 1 minute for testing

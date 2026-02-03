@@ -4,6 +4,7 @@ import com.afernber.project.constant.EventTypeConstants;
 import com.afernber.project.constant.ExceptionConstants;
 import com.afernber.project.constant.KafkaConstants;
 import com.afernber.project.constant.RedisConstants;
+import com.afernber.project.domain.entity.RoleEntity;
 import com.afernber.project.exception.member.MemberErrorCode;
 import com.afernber.project.domain.dto.MemberDTO;
 import com.afernber.project.domain.entity.MemberEntity;
@@ -13,6 +14,7 @@ import com.afernber.project.helpers.LatencyHelper;
 import com.afernber.project.mappers.MemberMapper;
 import com.afernber.project.repository.MemberRepository;
 import com.afernber.project.repository.PaymentRepository;
+import com.afernber.project.repository.RoleRepository;
 import com.afernber.project.service.KafkaProducerService;
 import com.afernber.project.service.MemberService;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -23,8 +25,10 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @AllArgsConstructor
 @Slf4j
@@ -33,6 +37,7 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository repository;
     private final PaymentRepository paymentRepository;
+    private final RoleRepository roleRepository;
     private final MemberMapper mapper;
 
     private final RedisTemplate<String, Object> redisTemplate;
@@ -80,11 +85,19 @@ public class MemberServiceImpl implements MemberService {
         }
 
         MemberEntity memberEntity = mapper.toEntity(member);
-
+        memberEntity.setPassword("");
+        
         if (memberEntity.getId() != null) {
             log.info("Manual ID {} provided. Setting to null to let DB generate ID and avoid StaleObject error. ", member.id());
             memberEntity.setId(null);
         }
+
+        Set<RoleEntity> roles = new HashSet<>();
+        RoleEntity userRole = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+        roles.add(userRole);
+        memberEntity.setRoles(roles);
+
         try {
             MemberDTO memberDTO = mapper.toDto(repository.save(memberEntity));
 
@@ -98,8 +111,6 @@ public class MemberServiceImpl implements MemberService {
         } catch (DataIntegrityViolationException ex) {
             throw new MemberException(MemberErrorCode.INVALID_MEMBER_DATA);
         }
-
-
     }
 
     @Override

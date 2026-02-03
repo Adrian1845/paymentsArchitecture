@@ -1,0 +1,15 @@
+meta {
+  name: Delete Payment
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{base_url}}/payments/8
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}

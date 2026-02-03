@@ -1,0 +1,22 @@
+meta {
+  name: Create Member
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/members
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{jwt_token}}
+}
+
+body:json {
+  {
+    "name": "Alice Smith",
+    "email": "testRole@example.com"
+  }
+}
