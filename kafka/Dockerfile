@@ -30,6 +30,6 @@ EXPOSE 9092
 CMD ["bin/kafka-server-start.sh", "config/server.properties", \
      "--override", "zookeeper.connect=zookeeper:2181", \
      "--override", "listeners=INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092", \
-     "--override", "advertised.listeners=INTERNAL://kafka_custom:29092,EXTERNAL://localhost:9092", \
+     "--override", "advertised.listeners=INTERNAL://kafka:29092,EXTERNAL://localhost:9092", \
      "--override", "listener.security.protocol.map=INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT", \
      "--override", "inter.broker.listener.name=INTERNAL"]

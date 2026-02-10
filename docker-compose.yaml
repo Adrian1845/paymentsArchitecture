@@ -1,5 +1,5 @@
 services:
-  # 1. Custom Database Service (Uses your ./postgres/Dockerfile)
+  # Custom Database Service
   db:
     build:
       context: ./postgres
@@ -13,8 +13,10 @@ services:
     volumes:
       - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - monitoring
 
-  # 2. Custom Caching Service (Uses your ./redis/Dockerfile)
+  # Custom Caching Service
   redis:
     build:
       context: ./redis
@@ -22,9 +24,12 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      # Ensure this volume mount is correct as per your redis Dockerfile
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    networks:
+      - monitoring
+      - redis
 
+  # Kafka Service
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.3
     container_name: zookeeper
@@ -33,7 +38,8 @@ services:
       ZOOKEEPER_TICK_TIME: 2000
     ports:
       - "2181:2181"
-
+    networks:
+      - kafka
   kafka:
     build: ./kafka
     container_name: kafka
@@ -42,8 +48,11 @@ services:
       - "29092:29092" # Internal access for other containers
     depends_on:
       - zookeeper
+    networks:
+      - monitoring
+      - kafka
 
-    # UI for Redis
+  # UI for Redis
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: redis_ui
@@ -53,8 +62,11 @@ services:
       - "8081:8081"
     depends_on:
       - redis
+    networks:
+      - monitoring
+      - redis
 
-    # UI for Kafka and Zookeeper
+  # UI for Kafka and Zookeeper
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka_ui
@@ -62,11 +74,72 @@ services:
       - "8080:8080"
     environment:
       - KAFKA_CLUSTERS_0_NAME=local-cluster
-      # IMPORTANT: Use the internal port 29092 here!
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka_custom:29092
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka:29092
       - KAFKA_CLUSTERS_0_ZOOKEEPER=zookeeper:2181
     depends_on:
       - kafka
       - zookeeper
+    networks:
+      - monitoring
+      - kafka
+
+  # Prometheus and Grafana
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - monitoring
+
+  redis_exporter:
+    image: oliver006/redis_exporter
+    container_name: redis_exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+    depends_on:
+      - redis
+    networks:
+      - monitoring
+
+  kafka_exporter:
+    image: danielqsj/kafka-exporter
+    container_name: kafka_exporter
+    command: [ "--kafka.server=kafka:29092" ]
+    depends_on:
+      - kafka
+      - zookeeper
+    networks:
+      - monitoring
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres_exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://user:password@postgres_db:5432/payments_db?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      - db
+    networks:
+      - monitoring
+
 volumes:
   postgres_data:
+
+networks:
+    monitoring:
+    redis:
+    kafka:
