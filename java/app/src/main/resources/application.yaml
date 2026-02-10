@@ -1,5 +1,6 @@
 server:
   port: 8090
+  address: 0.0.0.0
 
 spring:
   application:
@@ -34,8 +35,8 @@ spring:
   mail:
     host: sandbox.smtp.mailtrap.io
     port: 2525
-    username: 0c7394032e8e9d
-    password: e63b86187cd740
+    username: 69579831fabd55
+    password: 4a8ac88fb493ba
     properties:
       mail:
         smtp:
@@ -52,6 +53,11 @@ management:
   endpoint:
     prometheus:
       enabled: true
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: PaymentsArchitectureJava
 
 # 6. Logging
 logging:
